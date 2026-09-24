@@ -1,0 +1,994 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#141a36">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<title>Spring Rider</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+  :root{
+    color-scheme: dark;
+    --night:#141a36; --dusk:#3a3566; --glow:#e98a5c;
+    --ochre:#d99a3a; --cream:#fff4dc; --red:#e4483b; --muted:#a9a3c9;
+    --panel:rgba(20,26,54,.88);
+  }
+  [hidden]{display:none!important}
+  html,body{height:100%;margin:0}
+  body{background:var(--night);color:var(--cream);font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
+  #wrap{position:fixed;inset:0}
+  canvas{display:block;width:100%;height:100%}
+  .hud{position:absolute;top:calc(env(safe-area-inset-top,0px) + 12px);left:16px;right:16px;display:flex;justify-content:space-between;align-items:flex-start;gap:12px;pointer-events:none;flex-wrap:wrap}
+  .hud .box{background:var(--panel);padding:8px 12px;border-radius:4px;display:flex;flex-wrap:wrap;gap:4px 16px;align-items:baseline;font-variant-numeric:tabular-nums}
+  .hud .lvl{font-family:Bungee,Impact,sans-serif;font-size:13px;letter-spacing:.04em;color:var(--ochre)}
+  .hud .time{font-size:20px;font-weight:600}
+  .hud .apples{font-size:14px;color:var(--cream)}
+  .hud .apples b{color:var(--red)}
+  .hud .grav{font-size:13px;color:#39c6f4;font-weight:600}
+  .hud button{pointer-events:auto}
+  .hint{position:absolute;top:calc(env(safe-area-inset-top,0px) + 64px);left:50%;transform:translateX(-50%);width:max-content;max-width:calc(100% - 32px);background:var(--panel);padding:8px 14px;border-radius:4px;font-size:13px;line-height:1.45;text-align:center;color:var(--cream);pointer-events:none;text-wrap:balance}
+  button{font:inherit;color:var(--night);background:var(--ochre);border:0;border-radius:4px;padding:8px 12px;cursor:pointer;font-weight:600}
+  button:focus-visible{outline:2px solid var(--cream);outline-offset:2px}
+  button.ghost{background:transparent;color:var(--cream);box-shadow:inset 0 0 0 1px rgba(255,244,220,.35)}
+  .overlay{position:absolute;inset:0;display:grid;place-items:center;padding-inline:16px;background:rgba(20,26,54,.55)}
+  .card{background:var(--panel);max-width:640px;width:100%;padding:24px;border-radius:6px;display:flex;flex-direction:column;gap:16px;max-height:calc(100% - 32px);overflow:auto;box-sizing:border-box}
+  h1{font-family:Bungee,Impact,sans-serif;font-weight:400;font-size:clamp(34px,8vw,56px);line-height:.95;margin:0;color:var(--ochre);text-wrap:balance}
+  h1 span{color:var(--red)}
+  h2{font-family:Bungee,Impact,sans-serif;font-weight:400;font-size:28px;margin:0;text-wrap:balance}
+  p{margin:0;line-height:1.5;color:var(--muted)}
+  .worlds{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+  .wtab{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;background:rgba(255,244,220,.06);color:var(--cream);font-weight:400;padding:9px 10px 11px;box-shadow:inset 0 -3px 0 var(--sw)}
+  .wtab:hover{background:rgba(255,244,220,.12)}
+  .wtab[aria-pressed="true"]{background:rgba(255,244,220,.16);box-shadow:inset 0 -3px 0 var(--sw),inset 0 0 0 1px var(--sw)}
+  .wtab .wn{font-family:Bungee,Impact,sans-serif;font-size:12px;color:var(--sw)}
+  .wtab .wp{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+  .wdesc{font-size:13px;line-height:1.5;color:var(--muted);margin:0}
+  .wdesc b{color:var(--cream);font-weight:600}
+  .levels{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+  .levels button{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;background:rgba(255,244,220,.07);color:var(--cream);font-weight:400;padding:10px 12px}
+  .levels button:hover{background:rgba(217,154,58,.25)}
+  .levels .n{font-family:Bungee,Impact,sans-serif;font-size:13px;color:var(--ochre)}
+  .levels .best{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+  .levels .best.done{color:var(--cream)}
+  .keys{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:13px;color:var(--muted)}
+  .keys kbd{font:inherit;color:var(--cream);font-weight:600}
+  .row{display:flex;gap:8px;flex-wrap:wrap}
+  .big{font-size:32px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--cream)}
+  .touch{position:absolute;left:0;right:0;bottom:calc(env(safe-area-inset-bottom,0px) + 16px);padding-inline:16px;display:none;justify-content:space-between;pointer-events:none}
+  .touch .grp{display:flex;gap:10px;pointer-events:auto}
+  .touch button{width:64px;height:64px;border-radius:50%;background:rgba(255,244,220,.14);color:var(--cream);font-size:22px;padding:0}
+  .touch button.on{background:rgba(217,154,58,.6)}
+  @media (max-width:560px){ .worlds{grid-template-columns:repeat(2,1fr)} }
+  @media (pointer:coarse){ .touch{display:flex} .keys{display:none} }
+</style>
+</head>
+<body>
+
+<div id="wrap">
+  <canvas id="c"></canvas>
+  <div class="hud">
+    <div class="box">
+      <span class="lvl" id="hLvl">1-1 · First Light</span>
+      <span class="time" id="hTime">00:00.00</span>
+      <span class="apples" id="hApples"><b>●</b> 0/3</span>
+      <span class="grav" id="hGrav" hidden>Gravity ↑</span>
+    </div>
+    <div class="row">
+      <button class="ghost" id="bRestart" title="Restart (Enter)">Restart</button>
+      <button class="ghost" id="bSound" title="Sound (M)">Sound on</button>
+      <button class="ghost" id="bFull" title="Fullscreen (F)">Fullscreen</button>
+      <button class="ghost" id="bMenu" title="Levels (Esc)">Levels</button>
+    </div>
+  </div>
+  <div class="hint" id="hint" hidden></div>
+
+  <div class="touch" id="touch">
+    <div class="grp">
+      <button data-k="left" aria-label="Volt back">⟲</button>
+      <button data-k="right" aria-label="Volt forward">⟳</button>
+    </div>
+    <div class="grp">
+      <button data-k="turn" aria-label="Turn around">⇄</button>
+      <button data-k="brake" aria-label="Brake">▼</button>
+      <button data-k="gas" aria-label="Throttle">▲</button>
+    </div>
+  </div>
+
+  <div class="overlay" id="menu">
+    <div class="card">
+      <h1>Spring<span>·</span>Rider</h1>
+      <p>Squishy-suspension motocross across four worlds. Grab every apple, then touch the flower. Don't let your head hit the ground.</p>
+      <div class="worlds" id="worlds"></div>
+      <p class="wdesc" id="wdesc"></p>
+      <div class="levels" id="levels"></div>
+      <div class="keys">
+        <kbd>↑ / W</kbd><span>Throttle</span>
+        <kbd>↓ / S</kbd><span>Brake</span>
+        <kbd>← → / A D</kbd><span>Tap to volt (kick the bike round), hold to keep leaning</span>
+        <kbd>Space</kbd><span>Turn around</span>
+        <kbd>Enter</kbd><span>Restart level</span>
+        <kbd>Esc</kbd><span>Level select</span>
+        <kbd>M</kbd><span>Sound on / off</span>
+        <kbd>F</kbd><span>Fullscreen</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay" id="msg" hidden>
+    <div class="card">
+      <h2 id="msgTitle">Ouch.</h2>
+      <div class="big" id="msgTime" hidden></div>
+      <p id="msgText">Your head found the ground.</p>
+      <div class="row">
+        <button id="msgGo">Try again</button>
+        <button class="ghost" id="msgNext" hidden>Next level</button>
+        <button class="ghost" id="msgMenu">Levels</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+// ---------- Level building helpers (metres, y points down) ----------
+// T: solid ground below a surface line. box: solid rectangle. cave: air between a floor and a ceiling.
+const T = pts => { const a = pts.slice(); a.push([pts[pts.length-1][0], 60], [pts[0][0], 60]); return a; };
+const curve = (x0, x1, f, step = 0.5) => { const o = []; for (let x = x0; x <= x1 + 1e-9; x += step) o.push([x, f(x)]); return o; };
+const box = (x0, y0, x1, y1) => [[x0,y0],[x1,y0],[x1,y1],[x0,y1]];
+const ring = (cx, cy, r, a0, a1, n = 24) => { const o = []; for (let i = 0; i <= n; i++) { const a = a0 + (a1 - a0)*i/n; o.push([cx + r*Math.cos(a), cy + r*Math.sin(a)]); } return o; };
+const disc = (cx, cy, r, n = 40) => ring(cx, cy, r, 0, Math.PI*2, n).slice(0, -1);
+const cave = (floor, ceil) => floor.concat(ceil.slice().reverse());
+// Thorn pods: optional sway (ax, ay), speed, phase, and a vine they hang from.
+const K = (x, y, o = {}) => ({ x, y, ax:0, ay:0, sp:1, ph:0, hang:false, ...o });
+const row = (x0, x1, step, y) => { const r = []; for (let x = x0; x <= x1 + 1e-9; x += step) r.push(K(x, y, { hang:true })); return r; };
+
+// ---------- World 1 · Dusk Hills ----------
+const W1 = [
+  { name: "First Light", start: [0, -1.1], hint: "Grab every apple, then touch the flower. Tap ← → to volt.",
+    polys: [T([[-4,-30],[-4,0],[12,0],[18,-1.2],[22,-1.6],[26,-1],[32,0],[40,0],[44,-2.5],[48,-3],[52,-2.2],[56,0],[72,0],[72,-30]])],
+    apples: [[22,-2.7],[48,-4.1],[62,-0.7]], flower: [68,-0.7] },
+  { name: "Gap Year", start: [0, -1.1],
+    polys: [T([[-4,-30],[-4,0],[14,0],[20,-1.4],[23,-2.2],[23,6],[30,6],[30,-0.6],[34,0],[44,0],[48,-1.5],[60,-1.5],[64,0],[76,0],[76,-30]])],
+    apples: [[26.5,-3.4],[54,-2.6],[70,-0.7]], flower: [73,-0.7] },
+  { name: "Washboard", start: [0, -1.1],
+    polys: [T([[-4,-30],[-4,0],[8,0], ...curve(8.5, 56, x => -0.35*(1-Math.cos((x-8)*Math.PI/2)), 0.25), [60,0],[66,-3],[70,-3],[76,0],[88,0],[88,-30]])],
+    apples: [[18,-1.8],[34,-1.8],[50,-1.8],[68,-4.2]], flower: [84,-0.7] },
+  { name: "Low Ceiling", start: [0, -1.1],
+    polys: [T([[-4,-30],[-4,0],[22,0],[24,-0.4],[26,0],[40,0],[46,-2],[52,-2],[58,-4],[66,-4],[72,-1],[84,-1],[84,-30]]),
+            [[14,-2.9],[34,-2.9],[34,-6],[14,-6]],
+            [[60,-6.6],[64,-6.6],[64,-8],[60,-8]]],
+    apples: [[24,-1.4],[49,-3.1],[62,-5.1]], flower: [81,-1.7] },
+  { name: "The Bowl", start: [0, -9.1],
+    polys: [T([[-4,-30],[-4,-8],[4,-8], ...curve(4.5, 20, x => -8*(1+Math.cos(Math.PI*(x-4)/16))/2),
+               ...curve(20.5, 32, x => -5*(1-Math.cos(Math.PI*(x-20)/12))/2), [44,-5],[44,-30]])],
+    apples: [[12,-5.2],[20,-1.2],[27,-4.3]], flower: [40,-5.7] },
+  { name: "Summit", start: [0, -1.1],
+    polys: [T([[-4,-30],[-4,0],[8,0],[16,-4],[20,-4],[28,-9],[32,-9],[40,-14],[46,-14],[50,-12],[60,-12],[60,-30]])],
+    apples: [[18,-5.1],[30,-10.1],[43,-15.2]], flower: [56,-12.7] },
+  { name: "Rollercoaster", start: [0, -1.1],
+    polys: [T([[-4,-30],[-4,0],[6,0], ...curve(6.5, 70, x => -2.5*(1-Math.cos((x-6)*Math.PI/8))), [84,0],[84,-30]])],
+    apples: [[14,-6.2],[38,-1.2],[62,-6.2]], flower: [80,-0.7] },
+  { name: "Island Hop", start: [0, -1.1],
+    polys: [T([[-4,-30],[-4,0],[12,0],[16,-1],[16,8],[22,8],[22,-0.5],[32,-0.5],[36,-1.6],[36,8],[41,8],[41,-0.3],
+               [44,-1],[50,-1],[55,-1.8],[55,8],[60,8],[60,-0.3],[63,-0.8],[78,-0.8],[78,-30]])],
+    apples: [[19,-2.6],[38.5,-3],[57.5,-3.2]], flower: [74,-1.5] },
+  { name: "Cavern", start: [0, -1.1],
+    polys: [T([[-4,-30],[-4,0],[10,0],[16,0.5],[22,0.5],[28,0],[34,-1],[40,0],[50,0],[50,-30]]),
+            [[-3.9,-4.2],[10,-4.2],[16,-2.8],[22,-2.8],[28,-4],[34,-4.6],[40,-4],[49.9,-4],[49.9,-40],[-3.9,-40]]],
+    apples: [[19,-0.7],[34,-2.2],[42,-0.7]], flower: [47,-0.7] },
+  { name: "Drop Zone", start: [0, -20.1],
+    polys: [T([[-4,-40],[-4,-19],[8,-19],[10,-18.6],[10,-14],[20,-14],[22,-13.6],[22,-9],[32,-9],[34,-8.6],[34,-4],
+               [44,-4],[46,-3.6],[46,0],[60,0],[60,-40]])],
+    apples: [[15,-15.2],[27,-10.2],[39,-5.2]], flower: [55,-0.7] },
+  { name: "Pendulum", start: [12, 0.9],
+    polys: [T([[-4,-30],[-4,-10], ...curve(0, 24, x => 2 - 12*((x-12)/12)**2), [30,-10],[30,-30]])],
+    apples: [[4,-4.5],[20,-4.5],[1,-9.5]], flower: [27,-10.7] },
+  { name: "Grand Tour", start: [0, -1.1],
+    polys: [T([[-4,-30],[-4,0],[10,0], ...curve(10.5, 26, x => -0.3*(1-Math.cos((x-10)*Math.PI/2)), 0.25),
+               [30,0],[36,-2],[39,-2.6],[39,6],[46,6],[46,-1],[50,-1],[58,-5],[66,-5],[70,-3],[90,-3],[96,0],[110,0],[110,-30]]),
+            [[72,-6],[86,-6],[86,-8],[72,-8]]],
+    apples: [[18,-1.5],[42.5,-4],[62,-6.2],[79,-3.7],[100,-0.7]], flower: [106,-0.7] },
+];
+
+// ---------- World 2 · Thornwood (thorn pods kill on touch) ----------
+const W2 = [
+  { name: "Thorn Path", start: [0, -1.1], hint: "Thorn pods kill on touch. Use the kickers to hop over them.",
+    polys: [T([[-4,-30],[-4,0],[16,0],[19,-1],[19.3,0],[43,0],[46,-1.2],[46.3,0],[62,0],[62,-30]])],
+    killers: [K(21.8,-0.3), K(48.6,-0.3), K(49.4,-0.3)],
+    apples: [[21.5,-2.8],[48.5,-3],[55,-0.7]], flower: [59,-0.7] },
+  { name: "Overgrowth", start: [0, -1.1], hint: "Pods hang from the vines. Keep your head down — no wheelies.",
+    polys: [T([[-4,-30],[-4,0],[26,0],[28,-0.6],[30,0],[60,0],[64,-1],[80,-1],[80,-30]])],
+    killers: [...[12,15,18,36,39,42].map(x => K(x, -3.3, { hang:true })), K(28,-3.9,{ hang:true })],
+    apples: [[15,-1],[28,-1.6],[45,-0.7]], flower: [76,-1.7] },
+  { name: "Swinging Seeds", start: [0, -1.1], hint: "Ride under when the pods rise.",
+    polys: [T([[-4,-30],[-4,0],[60,0],[62,-0.8],[64,0],[72,0],[72,-30]])],
+    killers: [K(18,-2.2,{ ay:1.8, sp:1.8, hang:true }), K(30,-2.2,{ ay:1.8, sp:2.4, ph:1, hang:true }),
+              K(42,-2.2,{ ay:1.8, sp:1.5, ph:2, hang:true }), K(52,-2.2,{ ay:1.8, sp:2.1, ph:3.5, hang:true })],
+    apples: [[24,-0.7],[36,-0.7],[47,-0.7]], flower: [68,-0.7] },
+  { name: "Canopy Jump", start: [0, -1.1],
+    polys: [T([[-4,-30],[-4,0],[14,0],[22,-2],[22,6],[29,6],[29,-0.5],[48,-0.5],[52,0],[70,0],[70,-30]])],
+    killers: [K(23.5,5.7), K(25.5,5.7), K(27.5,5.7)],
+    apples: [[25.5,-3.8],[40,-1.2],[60,-0.7]], flower: [66,-0.7] },
+  { name: "Root Tunnel", start: [0, -1.1],
+    polys: [T([[-4,-30],[-4,0],[16,0],[19,-1],[19.3,0],[28,0],[31,-1],[31.3,0],[46,0],[52,-2],[64,-2],[64,-30]]), box(12,-9,40,-4.6)],
+    killers: [K(21.8,-0.3), K(33.8,-0.3)],
+    apples: [[25.5,-0.7],[37,-0.7],[58,-2.7]], flower: [61,-2.7] },
+  { name: "Patrol", start: [0, -1.1], hint: "Some pods roam. Jump when the landing is clear.",
+    polys: [T([[-4,-30],[-4,0],[12,0],[15,-1],[15.3,0],[30,0],[33,-1],[33.3,0],[48,0],[51,-1],[51.3,0],[70,0],[70,-30]])],
+    killers: [K(18.5,-0.3,{ ax:1.2, sp:1.5 }), K(36.5,-0.3,{ ax:1.5, sp:2 }), K(54.5,-0.3,{ ax:1.8, sp:2.5 })],
+    apples: [[17.5,-2.8],[35.5,-2.8],[53.5,-2.8]], flower: [66,-0.7] },
+  { name: "Vine Climb", start: [0, -1.1],
+    polys: [T([[-4,-30],[-4,0],[10,0],[18,-4],[24,-4],[32,-8],[38,-8],[46,-12],[58,-12],[58,-30]])],
+    killers: [K(14,-5.4,{ hang:true }), K(28,-9.4,{ hang:true }), K(42,-13.4,{ hang:true }), K(21,-7,{ hang:true }), K(35,-11,{ hang:true })],
+    apples: [[21,-4.7],[35,-8.7],[50,-12.7]], flower: [55,-12.7] },
+  { name: "Gauntlet", start: [0, -1.1], hint: "Hop the pods on the ground, duck the ones above.",
+    polys: [T([[-4,-30],[-4,0],[18,0],[21,-0.7],[21.3,0],[30,0],[33,-0.7],[33.3,0],[56,0],[56,-30]])],
+    killers: [K(23.1,-0.3), K(35.1,-0.3), ...row(18, 38, 2.5, -4.3)],
+    apples: [[26.5,-0.7],[38,-0.7],[47,-0.7]], flower: [53,-0.7] },
+  { name: "Drop Garden", start: [0, -17.1],
+    polys: [T([[-4,-40],[-4,-16],[10,-16],[10,-12],[24,-12],[24,-8],[38,-8],[38,-4],[52,-4],[52,0],[66,0],[66,-40]])],
+    killers: [K(10.8,-12.3), K(24.8,-8.3), K(38.8,-4.3), K(52.8,-0.3)],
+    apples: [[17,-12.7],[31,-8.7],[45,-4.7]], flower: [62,-0.7] },
+  { name: "Mangrove", start: [0, -1.1],
+    polys: [T([[-4,-30],[-4,0],[12,0],[20,-2],[20,6],[27,6],[27,-0.6],[38,0],[42,0],[48,-2],[48,6],[55,6],[55,-0.6],[70,0],[70,-30]])],
+    killers: [K(21.5,5.7), K(23.5,5.7), K(25.5,5.7), K(49.5,5.7), K(51.5,5.7), K(53.5,5.7),
+              K(23.5,-4.2,{ ay:1.4, sp:1.6, hang:true }), K(51.5,-4.2,{ ay:1.4, sp:2.1, ph:1, hang:true })],
+    apples: [[33,-1],[45,-2.2],[64,-1]], flower: [67,-0.7] },
+  { name: "Thorn Bowl", start: [0, -9.1],
+    polys: [T([[-4,-30],[-4,-8], ...curve(2, 34, x => -8*(1+Math.cos(Math.PI*(x-2)/16))/2), [40,-8],[40,-30]])],
+    killers: [K(18,-2.5,{ ay:2.2, sp:1.2 })],
+    apples: [[10,-4.8],[26,-4.8],[33,-9.2]], flower: [38,-8.7] },
+  { name: "Temple of Thorns", start: [0, -1.1],
+    polys: [T([[-4,-30],[-4,0],[14,0],[17,-1],[17.3,0],[30,0],[36,-2],[39,-2.8],[39,5],[45,5],[45,-1.2],[60,-1.2],[66,-4],[80,-4],[84,-2],[100,-2],[100,-30]])],
+    killers: [K(19.8,-0.3), K(40.5,4.7), K(42,4.7), K(43.5,4.7), ...row(48, 58, 2.5, -5.5), K(74,-6,{ ay:1.6, sp:1.8, hang:true })],
+    apples: [[23,-0.7],[42,-4.5],[53,-1.9],[74,-4.7],[90,-2.7]], flower: [96,-2.7] },
+];
+
+// ---------- World 3 · Outer Orbit (low gravity, blue apples change gravity) ----------
+const W3 = [
+  { name: "Moonwalk", g: 7, start: [0, -1.1], hint: "Lower gravity out here — enjoy the float.",
+    polys: [T([[-4,-30],[-4,0],[12,0],[16,-1.2], ...curve(16.5, 29.5, x => -1.2 + 4.2*Math.sin(Math.PI*(x-16)/14)), [30,-1.2],[34,-1],[46,-1],[50,-2.5],
+               ...curve(50.5, 65.5, x => -2.5 + 5*Math.sin(Math.PI*(x-50)/16)), [66,-2.5],[70,-1],[84,-1],[84,-30]])],
+    apples: [[23,-3.2],[58,-4.4],[76,-1.7]], flower: [80,-1.7] },
+  { name: "Flip Side", g: 7, start: [0, -1.1], hint: "Blue apples change gravity. Volt twice to land wheels-first, then Space to face the right way.",
+    polys: [T([[-4,-30],[-4,0],[60,0],[60,-30]]), box(8,-14,50,-7)],
+    apples: [[14,-0.8,"up"],[30,-6.3],[44,-6.3,"down"]], flower: [56,-0.8] },
+  { name: "Crater Hop", g: 7, start: [0, -1.1], hint: "Nothing below the islands but space. Keep your speed up.",
+    polys: [[[-4,-30],[-4,0],[14,0],[18,-1.2],[18,4],[-4,4]], [[26,0.5],[36,0.5],[40,-1],[40,4],[26,4]],
+            [[49,0],[58,0],[62,-1.5],[62,4],[49,4]], [[72,0.5],[92,0.5],[92,-30],[92,4],[72,4]]],
+    apples: [[22,-3.1],[44.5,-3.1],[67,-3.5]], flower: [88,-0.2] },
+  { name: "Wall Walker", g: 7, cave: true, start: [6, -1.1], hint: "Gravity is about to pull right — volt left so your wheels meet the wall.",
+    polys: [[[4,-24],[30,-24],[30,-20],[14,-20],[14,0],[4,0]]],
+    apples: [[9,-0.8,"right"],[13.4,-10],[15.5,-21,"down"]], flower: [27,-20.8] },
+  { name: "Asteroid Belt", g: 4, start: [0, -1.1],
+    polys: [[[-4,-30],[-4,0],[12,0],[16,-1.2],[16,3],[-4,3]], [[24,-1],[32,-1],[35,-2.2],[35,1],[24,1]],
+            [[44,-3],[52,-3],[55,-4.2],[55,-1],[44,-1]], box(64,-2,75,0), disc(84,4,6)],
+    apples: [[20,-2.9],[39.5,-4.4],[59.5,-6.2]], flower: [84,-2.7] },
+  { name: "Stairway Up", g: 7, start: [0, -1.1], hint: "Upside down, the stairs go down. Space turns you around.",
+    polys: [T([[-4,-30],[-4,0],[46,0],[46,-5],[76,-5],[76,-30]]), [[4,-8],[24,-8],[24,-10],[40,-10],[40,-12],[60,-12],[60,-18],[4,-18]]],
+    apples: [[10,-0.8,"up"],[16,-7.3],[32,-9.3],[50,-11.3],[58,-11.3,"down"]], flower: [70,-5.7] },
+  { name: "Four Winds", g: 7, cave: true, start: [5, -1.1], hint: "Four blue apples, four directions of down.",
+    polys: [box(2,-12,16,0)],
+    apples: [[9,-0.8,"right"],[15.3,-6,"up"],[9,-11.3,"left"],[2.7,-6,"down"]], flower: [12,-0.8] },
+  { name: "Void Bridges", g: 7, start: [0, -1.1],
+    polys: [[[-4,-30],[-4,0],[20,0],[20,1],[-4,1]], box(36,0,60,1), box(76,0,96,1), box(14,-8,42,-7), box(54,-8,82,-7)],
+    apples: [[16,-0.8,"up"],[28,-6.3],[39,-6.3,"down"],[57,-0.8,"up"],[68,-6.3],[79,-6.3,"down"]], flower: [92,-0.8] },
+  { name: "Moon Bowl", g: 3.5, start: [20, 0.9], hint: "Pump the bowl to get big air.",
+    polys: [T([[-4,-40],[-4,-10], ...curve(0, 40, x => 2 - 12*((x-20)/20)**2), [44,-10],[44,-40]])],
+    apples: [[2,-9.5],[38,-9.5],[20,1.3]], flower: [42,-10.7] },
+  { name: "Space Station", g: 6, cave: true, start: [0, -1.1],
+    polys: [[[-4,0],[14,0],[14,-4],[18,-4],[18,0],[46,0],[46,-4],[50,-4],[50,0],[74,0],[74,-7],[64,-7],[64,-3],[60,-3],[60,-7],[34,-7],[34,-3],[30,-3],[30,-7],[-4,-7]]],
+    apples: [[9,-0.8,"up"],[25,-6.2,"down"],[38,-0.8],[41,-0.8,"up"],[55,-6.2,"down"]], flower: [70,-0.8] },
+  { name: "Orbit", g: 5, cave: true, start: [16, -13.1], hint: "Circle the station clockwise: ease over each corner, catch the blue apple, and volt your wheels onto the next face.",
+    polys: [box(-8,-30,44,18), box(10,-12,26,4)],
+    apples: [[27.2,-9.5,"left"],[23.5,5.2,"up"],[8.8,1.5,"right"],[12.5,-13.2,"down"]], flower: [19,-12.8] },
+  { name: "Final Frontier", g: 6, start: [0, -1.1],
+    polys: [[[-4,-30],[-4,0],[14,0],[18,-1.2],[18,4],[-4,4]], box(26,0,40,4), box(34,-8,70,-7), [[56,0],[72,0],[76,-1.4],[76,4],[56,4]], disc(90,6.5,7)],
+    apples: [[22,-3.1],[37,-0.8,"up"],[50,-6.3],[64,-6.3,"down"],[68,-0.8]], flower: [90,-1.2] },
+];
+
+// ---------- World 4 · Crystal Caves (levels carved from rock) ----------
+const needle = x => 1.5*Math.sin(x/4);
+const roll = x => 2.5*Math.sin(x/5);
+const saw = Array.from({ length: 21 }, (_, i) => [10 + 1.5*i, i % 2 ? -0.6 : 0]);
+// Steps are 0.5 m with a slight bevel: too tall to roll up, fair with a wheelie and a volt.
+const stairs = (x0, n, h = 0.5, run = 4) => { const o = []; for (let i = 0; i < n; i++) o.push([x0 + i*run, -i*h], [x0 + i*run + 0.3, -(i+1)*h]); return o; };
+const heartFloor = [[-4,0],[8,0],[9,-0.6],[10,0],[18,0],[19,-0.6],[20,0],[30,0], ...stairs(30, 4), [50,-2],
+  ...curve(50.5, 69.5, x => -2 + 5*Math.sin(Math.PI*(x-50)/20)), [70,-2],[90,-2]];
+const W4 = [
+  { name: "Into the Dark", cave: true, start: [0, -1.1], hint: "The whole level is carved from rock now. Mind the ceiling.",
+    polys: [cave([[-4,0],[10,0],[16,1.5],[22,1.5],[28,0],[36,-2],[44,-2],[50,0],[64,0]],
+                 [[-4,-5],[12,-5],[18,-3.8],[24,-4],[30,-5],[38,-7],[46,-6.5],[52,-5],[64,-5]])],
+    apples: [[19,0.8],[40,-2.7],[56,-0.7]], flower: [61,-0.7] },
+  { name: "Stalactites", cave: true, start: [0, -1.1],
+    polys: [cave([[-4,0],[16,0],[17,-0.6],[18,0],[26,0],[27,-0.6],[28,0],[44,0],[50,-1],[60,-1]],
+                 [[-4,-5],[10,-5],[12,-2.7],[14,-5],[20,-5],[22,-2.7],[24,-5],[30,-5],[32,-2.7],[34,-5],[36,-5],[38,-2.7],[40,-5],[60,-5.5]])],
+    apples: [[17,-1.3],[27,-1.3],[38,-0.7]], flower: [57,-1.7] },
+  { name: "Quarterpipe", cave: true, start: [-7, -11.1], hint: "Drop in, ride up the far wall and volt onto the ledge.",
+    polys: [[[-10,-14],[38,-14],[38,-8],[21,-8],[21,-6], ...ring(15,-6,6,0,Math.PI,24).slice(1), [9,-10],[-10,-10]]],
+    apples: [[15,-0.7],[15,-9],[28,-8.7]], flower: [35,-8.7] },
+  { name: "Staircase", cave: true, start: [0, -1.1], hint: "Steps too tall to roll up: pop a wheelie, then volt forward.",
+    polys: [cave([[-4,0], ...stairs(10, 6), [44,-3]],
+                 [[-4,-5],[8,-5],[12,-5.4],[16,-6],[20,-6.6],[24,-7.2],[28,-7.8],[32,-8.4],[44,-8.4]])],
+    apples: [[16,-1.7],[24,-2.7],[36,-3.7]], flower: [41,-3.7] },
+  { name: "The Curl", cave: true, start: [4, -1.1], hint: "Build speed and ride the curl up and over.",
+    polys: [[[-4,0],[30,0], ...ring(30,-4,4,Math.PI/2,-Math.PI/2,24).slice(1), [-4,-8]]],
+    apples: [[16,-0.7],[33.3,-4],[30,-7.3]], flower: [1,-0.8] },
+  { name: "Crystal Shaft", cave: true, start: [0, -25.1], hint: "Drop down the shaft and land on your wheels.",
+    polys: [[[-4,-30],[20,-30],[20,-19],[6,-16],[6,-15],[20,-15],[20,-4],[6,-1],[6,0],[20,0],[20,4],[-4,4],[-4,-7],[12,-7],[12,-8],[-4,-11],[-4,-23],[10,-23],[10,-24],[-4,-24]]],
+    apples: [[14,-18.4],[4,-10.2],[14,-3.4],[16,3.3]], flower: [0,3.3] },
+  { name: "Needle's Eye", cave: true, start: [-2, -1.1], hint: "Tight squeeze. Easy on the throttle.",
+    polys: [cave([[-4,0], ...curve(0, 60, needle), [66,needle(60)]], [[-4,-3.2], ...curve(0, 60, x => needle(x) - 3.2), [66,needle(60) - 3.2]])],
+    apples: [[18.85,-2.2],[31.4,0.8],[44,-2.2]], flower: [63,needle(60) - 0.7] },
+  { name: "Undercut", cave: true, start: [0, -1.1],
+    polys: [[[-4,0],[13,0],[17.5,-2.8],[17.8,0],[20,0],[20,-2.5],[18.6,-2.5],[18.6,-3],[44,-3],[50,-1],[60,-1],[60,-9],[-4,-9]]],
+    apples: [[8,-0.7],[30,-3.7],[53,-1.7]], flower: [58,-1.7] },
+  { name: "Rollercave", cave: true, start: [0, -1.1],
+    polys: [cave([[-4,0], ...curve(0, 70, roll), [76,roll(70)]], [[-4,-5.5], ...curve(0, 70, x => roll(x) - 5.5), [76,roll(70) - 5.5]])],
+    apples: [[23.6,-3.2],[39.3,1.8],[55,-3.2]], flower: [73,roll(70) - 0.7] },
+  { name: "Sawtooth", cave: true, start: [0, -1.1],
+    polys: [cave([[-4,0], ...saw, [50,0],[56,-3],[66,-3]], [[-4,-5.5],[40,-5.5],[48,-8],[66,-8]])],
+    apples: [[16,-1.4],[31,-1.4],[60,-3.7]], flower: [63,-3.7] },
+  { name: "Capsule", cave: true, start: [6, -1.1], hint: "Go back and forth to build speed — both ends curl up to the ceiling.",
+    polys: [[[0,0],[20,0], ...ring(20,-4,4,Math.PI/2,-Math.PI/2,24).slice(1), ...ring(0,-4,4,-Math.PI/2,-1.5*Math.PI,24).slice(0,-1)]],
+    apples: [[20,-7.3],[0,-7.3],[-3.4,-4]], flower: [10,-0.8] },
+  { name: "Crystal Heart", cave: true, start: [0, -1.1],
+    polys: [[...heartFloor, ...ring(90,-5.5,3.5,Math.PI/2,-Math.PI/2,20).slice(1),
+             [66,-9],[62,-8.5],[50,-8.5],[44,-7.6],[40,-7],[36,-6.3],[32,-5.6],[28,-5],[26,-5],[24,-2.7],[22,-5],[16,-5],[14,-2.7],[12,-5],[6,-5],[4,-2.7],[2,-5],[-4,-5]]],
+    apples: [[14,-0.7],[40,-2.2],[60,2.3],[93.1,-5.5]], flower: [80,-2.7] },
+];
+
+const WORLDS = [
+  { name: "Dusk Hills", theme: "dusk", g: 10, swatch: "#d99a3a", desc: "Learn the bike: throttle, volts and big jumps.", levels: W1 },
+  { name: "Thornwood", theme: "jungle", g: 10, swatch: "#8fd14f", desc: "Thorn pods kill on touch — some hang from vines, some swing.", levels: W2 },
+  { name: "Outer Orbit", theme: "space", g: 7, swatch: "#b9a8ff", desc: "Low gravity, open space, and blue apples that change which way is down.", levels: W3 },
+  { name: "Crystal Caves", theme: "cave", g: 10, swatch: "#8ff3ff", desc: "Levels carved inside rock: ceilings, walls and curls to ride.", levels: W4 },
+];
+
+const THEMES = {
+  dusk:   { sky: [[0,"#141a36"],[0.62,"#3a3566"],[1,"#e98a5c"]], stars: 90, ridges: [["#2c2a55",0.12,38,0.78,1,0],["#23214a",0.25,28,0.9,4,0]],
+            ground: ["#c9892f","#b0721f"], tex: "hatch", edge: "#ffe09a" },
+  jungle: { sky: [[0,"#051a12"],[0.55,"#134531"],[1,"#79a653"]], stars: 0, ridges: [["#12402c",0.1,44,0.7,2,1],["#0c3021",0.22,36,0.84,5,1]],
+            ground: ["#4a3322","#38261a"], tex: "roots", edge: "#8fd14f", vines: true, fireflies: true },
+  space:  { sky: [[0,"#020208"],[0.6,"#0b0922"],[1,"#221444"]], stars: 260, planet: true,
+            ground: ["#6b6888","#57547a"], tex: "craters", edge: "#dcd8ff" },
+  cave:   { sky: [[0,"#03090e"],[0.5,"#0a1a26"],[1,"#0f2838"]], stars: 0, specks: true,
+            ground: ["#1c3040","#223a4e"], tex: "facets", edge: "#8ff3ff" },
+};
+
+// ---------- Physics constants ----------
+const SUB = 12, DT = 1/60/SUB;
+const WR = 0.4, WM = 0.8, WI = 0.5*WM*WR*WR*1.4;
+const FM = 3, FI = 1.3;
+const AX = 0.85, AY = 0.55;
+const KS = 320, CS = 14;
+const MU = 1.1, E = 0.05;
+const MAXW = 48, BRAKE = 40;
+const HEAD = { x: 0.18, y: -1.05, r: 0.24 };
+const PICK = 0.75, KR = 0.3;
+const VOLT = 2.2, VOLT_CD = 0.28, LEAN_X = 0.28, LEAN_HOLD = 4.5, TQ_MAX = 9;
+const GDIR = { down: [0, 1], up: [0, -1], left: [-1, 0], right: [1, 0] };
+
+// ---------- State ----------
+let voltCool = 0, voltQueued = 0;
+let WORLD, L, wi = 0, li = 0, segs = [], bounds, bike, apples, killers, taken, state = "menu", time = 0, keys = {}, impact = 0, bumpCool = 0;
+let grav = GDIR.down, gmag = 10, theme = THEMES.dusk, hintTimer = 0;
+
+// ---------- Sound (synthesised with Web Audio) ----------
+const snd = (() => {
+  let ac = null, master, o1, o2, filt, eg, muted = false;
+  try { muted = localStorage.getItem("springrider.muted") === "1"; } catch {}
+  function init() {
+    if (ac) { if (ac.state === "suspended") ac.resume(); return; }
+    const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
+    ac = new AC();
+    master = ac.createGain(); master.gain.value = muted ? 0 : 0.5; master.connect(ac.destination);
+    o1 = ac.createOscillator(); o1.type = "sawtooth"; o1.frequency.value = 40;
+    o2 = ac.createOscillator(); o2.type = "square"; o2.frequency.value = 20;
+    filt = ac.createBiquadFilter(); filt.type = "lowpass"; filt.frequency.value = 450;
+    eg = ac.createGain(); eg.gain.value = 0;
+    o1.connect(filt); o2.connect(filt); filt.connect(eg); eg.connect(master);
+    o1.start(); o2.start();
+  }
+  function tone(f, dur, type, vol, when = 0, slide) {
+    if (!ac || muted) return;
+    const t = ac.currentTime + when, o = ac.createOscillator(), g = ac.createGain();
+    o.type = type; o.frequency.setValueAtTime(f, t);
+    if (slide) o.frequency.exponentialRampToValueAtTime(slide, t + dur);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(master); o.start(t); o.stop(t + dur + 0.02);
+  }
+  function noise(dur, vol, ff) {
+    if (!ac || muted) return;
+    const n = Math.floor(ac.sampleRate*dur), b = ac.createBuffer(1, n, ac.sampleRate), d = b.getChannelData(0);
+    for (let i = 0; i < n; i++) d[i] = (Math.random()*2 - 1)*(1 - i/n)**2;
+    const src = ac.createBufferSource(), fl = ac.createBiquadFilter(), g = ac.createGain();
+    src.buffer = b; fl.type = "lowpass"; fl.frequency.value = ff; g.gain.value = vol;
+    src.connect(fl); fl.connect(g); g.connect(master); src.start();
+  }
+  return {
+    init,
+    engine(on, rpm, gas) {
+      if (!ac) return;
+      const t = ac.currentTime, f = 36 + Math.min(rpm, 60)*2.4 + (gas ? 14 : 0);
+      o1.frequency.setTargetAtTime(f, t, 0.06); o2.frequency.setTargetAtTime(f/2, t, 0.06);
+      filt.frequency.setTargetAtTime(gas ? 1000 : 450, t, 0.08);
+      eg.gain.setTargetAtTime(on ? (gas ? 0.2 : 0.08) : 0, t, 0.08);
+    },
+    apple() { tone(880, 0.12, "triangle", 0.3); tone(1320, 0.22, "triangle", 0.3, 0.07); },
+    grav() { tone(300, 0.4, "sine", 0.25, 0, 900); tone(450, 0.35, "triangle", 0.12, 0.05, 1300); },
+    crash() { noise(0.6, 0.9, 900); tone(170, 0.45, "square", 0.2, 0, 40); },
+    win() { [523, 659, 784, 1047].forEach((f, i) => tone(f, i === 3 ? 0.5 : 0.22, "triangle", 0.28, i*0.11)); },
+    bump(v) { noise(0.1, Math.min(0.7, v*0.08), 260); },
+    turn() { tone(260, 0.14, "sine", 0.15, 0, 520); },
+    volt() { noise(0.07, 0.25, 1400); tone(140, 0.08, "triangle", 0.12, 0, 90); },
+    toggle() {
+      muted = !muted;
+      try { localStorage.setItem("springrider.muted", muted ? "1" : "0"); } catch {}
+      if (master) master.gain.value = muted ? 0 : 0.5;
+      return muted;
+    },
+    get muted() { return muted; },
+  };
+})();
+
+// Best times are keyed "world-level"; older saves used the bare level number for world 1.
+const best = (() => { try { return JSON.parse(localStorage.getItem("springrider.best") || "{}"); } catch { return {}; } })();
+const saveBest = () => { try { localStorage.setItem("springrider.best", JSON.stringify(best)); } catch {} };
+for (const k of Object.keys(best)) if (/^\d+$/.test(k)) { if (best["0-" + k] == null) best["0-" + k] = best[k]; delete best[k]; }
+saveBest();
+
+function load(w, i) {
+  wi = w; li = i; WORLD = WORLDS[w]; L = WORLD.levels[i]; segs = [];
+  if (theme !== THEMES[WORLD.theme]) { theme = THEMES[WORLD.theme]; makePattern(); }
+  bounds = { minx: Infinity, maxx: -Infinity, miny: Infinity, maxy: -Infinity };
+  for (const p of L.polys) for (let k = 0; k < p.length; k++) {
+    const a = p[k], b = p[(k+1) % p.length];
+    if (a[1] < 59) { bounds.minx = Math.min(bounds.minx, a[0]); bounds.maxx = Math.max(bounds.maxx, a[0]); bounds.miny = Math.min(bounds.miny, a[1]); bounds.maxy = Math.max(bounds.maxy, a[1]); }
+    if (Math.hypot(b[0]-a[0], b[1]-a[1]) < 1e-6) continue;
+    segs.push({ ax:a[0], ay:a[1], bx:b[0], by:b[1],
+      minx:Math.min(a[0],b[0]), maxx:Math.max(a[0],b[0]), miny:Math.min(a[1],b[1]), maxy:Math.max(a[1],b[1]) });
+  }
+  const [sx, sy] = L.start;
+  voltCool = 0; voltQueued = 0;
+  grav = GDIR.down; gmag = L.g ?? WORLD.g;
+  bike = { dir: L.dir || 1, flip: L.dir || 1, lean: 0,
+    f: { x:sx, y:sy, vx:0, vy:0, a:0, w:0 },
+    wh: [-1, 1].map(s => ({ x:sx + s*AX, y:sy + AY + 0.05, vx:0, vy:0, a:0, w:0 })) };
+  apples = L.apples.map(a => ({ x:a[0], y:a[1], grav:a[2] || null, got:false }));
+  killers = L.killers || [];
+  taken = 0; time = 0; state = "play";
+  cam.x = sx; cam.y = sy;
+  $("menu").hidden = true; $("msg").hidden = true;
+  $("hLvl").textContent = `${wi+1}-${li+1} · ${L.name}`;
+  $("hint").textContent = L.hint || ""; $("hint").hidden = !L.hint; hintTimer = 7;
+  hud();
+}
+
+function closest(s, px, py) {
+  const dx = s.bx - s.ax, dy = s.by - s.ay;
+  let t = ((px - s.ax)*dx + (py - s.ay)*dy) / (dx*dx + dy*dy);
+  t = t < 0 ? 0 : t > 1 ? 1 : t;
+  return [s.ax + t*dx, s.ay + t*dy];
+}
+
+function collideWheel(wh) {
+  for (const s of segs) {
+    if (wh.x + WR < s.minx || wh.x - WR > s.maxx || wh.y + WR < s.miny || wh.y - WR > s.maxy) continue;
+    const [qx, qy] = closest(s, wh.x, wh.y);
+    let dx = wh.x - qx, dy = wh.y - qy; const d2 = dx*dx + dy*dy;
+    if (d2 >= WR*WR || d2 < 1e-12) continue;
+    const d = Math.sqrt(d2), nx = dx/d, ny = dy/d, pen = WR - d;
+    wh.x += nx*pen; wh.y += ny*pen;
+    const rx = -nx*WR, ry = -ny*WR;
+    let vcx = wh.vx - wh.w*ry, vcy = wh.vy + wh.w*rx;
+    const vn = vcx*nx + vcy*ny;
+    let jn = 0;
+    if (-vn > impact) impact = -vn;
+    if (vn < 0) { jn = -(1+E)*vn*WM; wh.vx += nx*jn/WM; wh.vy += ny*jn/WM; }
+    const tx = -ny, ty = nx;
+    vcx = wh.vx - wh.w*ry; vcy = wh.vy + wh.w*rx;
+    const vt = vcx*tx + vcy*ty, rt = rx*ty - ry*tx;
+    let jt = -vt / (1/WM + rt*rt/WI);
+    const lim = MU*(jn + 0.002);
+    jt = jt > lim ? lim : jt < -lim ? -lim : jt;
+    wh.vx += tx*jt/WM; wh.vy += ty*jt/WM; wh.w += rt*jt/WI;
+  }
+}
+
+function headPos() {
+  const f = bike.f, c = Math.cos(f.a), s = Math.sin(f.a), hx = HEAD.x*bike.dir + bike.lean*LEAN_X;
+  return [f.x + c*hx - s*HEAD.y, f.y + s*hx + c*HEAD.y];
+}
+function kpos(k) { const s = Math.sin(time*k.sp + k.ph); return [k.x + k.ax*s, k.y + k.ay*s]; }
+
+function step(dt, alive) {
+  const f = bike.f, d = bike.dir, gx = grav[0]*gmag*dt, gy = grav[1]*gmag*dt;
+  f.vx += gx; f.vy += gy; for (const w of bike.wh) { w.vx += gx; w.vy += gy; }
+  const c = Math.cos(f.a), s = Math.sin(f.a);
+  bike.wh.forEach((wh, i) => {
+    const lx = i ? AX : -AX, rx = c*lx - s*AY, ry = s*lx + c*AY;
+    const avx = f.vx - f.w*ry, avy = f.vy + f.w*rx;
+    const Fx = KS*(f.x + rx - wh.x) + CS*(avx - wh.vx);
+    const Fy = KS*(f.y + ry - wh.y) + CS*(avy - wh.vy);
+    wh.vx += Fx/WM*dt; wh.vy += Fy/WM*dt;
+    f.vx -= Fx/FM*dt; f.vy -= Fy/FM*dt;
+    f.w += (rx*(-Fy) - ry*(-Fx))/FI*dt;
+  });
+  if (alive) {
+    const rear = bike.wh[d > 0 ? 0 : 1];
+    // Engine torque fades as the rear wheel spins up: strong pull (and wheelie kick) from
+    // low speed, gentle at top speed. The frame gets the reaction torque.
+    if (keys.gas && rear.w*d < MAXW) {
+      const tq = TQ_MAX*Math.max(0.2, 1 - Math.abs(rear.w)/MAXW);
+      rear.w += d*tq/WI*dt; f.w -= d*tq/FI*dt;
+    }
+    // Holding a volt key keeps a light lean on the bike.
+    const hold = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
+    if (hold) f.w += hold*LEAN_HOLD/FI*dt;
+    if (keys.brake) for (const wh of bike.wh) {
+      const dw = -(wh.w - f.w)*Math.min(1, BRAKE*dt); wh.w += dw; f.w -= dw*WI/FI;
+    }
+  }
+  f.w *= 1 - 0.05*dt;
+  f.x += f.vx*dt; f.y += f.vy*dt; f.a += f.w*dt;
+  for (const wh of bike.wh) { wh.x += wh.vx*dt; wh.y += wh.vy*dt; wh.a += wh.w*dt; collideWheel(wh); }
+}
+
+function tick() {
+  for (let i = 0; i < SUB; i++) {
+    step(DT, state === "play");
+    if (state === "play") {
+      const [hx, hy] = headPos();
+      for (const s of segs) {
+        if (hx + HEAD.r < s.minx || hx - HEAD.r > s.maxx || hy + HEAD.r < s.miny || hy - HEAD.r > s.maxy) continue;
+        const [qx, qy] = closest(s, hx, hy);
+        if ((hx-qx)**2 + (hy-qy)**2 < HEAD.r*HEAD.r) { die("Ouch.", "Your head found the ground."); break; }
+      }
+    }
+  }
+  if (state !== "play") return;
+  const f = bike.f, m = 15;
+  if (f.x < bounds.minx - m || f.x > bounds.maxx + m || f.y < bounds.miny - m || f.y > bounds.maxy + m) { die("Lost in the void.", "You drifted out of the world."); return; }
+  time += 1/60;
+  if (hintTimer > 0 && (hintTimer -= 1/60) <= 0) $("hint").hidden = true;
+  voltCool -= 1/60;
+  if (voltCool <= 0 && voltQueued) doVolt(voltQueued);
+  const hold = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
+  bike.lean += ((hold ? hold*0.6 : 0) - bike.lean)*(hold && Math.abs(bike.lean) < 0.6 ? 0.2 : 0.07);
+  const [hx, hy] = headPos();
+  const body = [[hx, hy, HEAD.r], [bike.wh[0].x, bike.wh[0].y, WR], [bike.wh[1].x, bike.wh[1].y, WR], [f.x, f.y, 0.3]];
+  for (const k of killers) {
+    const [kx, ky] = kpos(k);
+    if (body.some(([x, y, r]) => (x-kx)**2 + (y-ky)**2 < (r + KR)**2)) { burst(kx, ky, "#ff5d7a"); die("Pricked!", "A thorn pod got you."); return; }
+  }
+  const near = (ax, ay) => body.some(([x, y]) => (x-ax)**2 + (y-ay)**2 < PICK*PICK);
+  for (const a of apples) if (!a.got && near(a.x, a.y)) {
+    a.got = true; taken++;
+    if (a.grav) { grav = GDIR[a.grav]; burst(a.x, a.y, "#39c6f4"); snd.grav(); }
+    else { burst(a.x, a.y, "#e4483b"); snd.apple(); }
+  }
+  if (taken === apples.length && near(L.flower[0], L.flower[1])) win();
+  hud();
+}
+
+// A volt: an instant rotation kick applied to the whole bike (frame + wheels) about
+// its centre of mass. Momentum is conserved; on the ground the wheel pushed into the
+// terrain gets stopped by it, which pops the other end up.
+function volt(sgn) {
+  if (state !== "play") return;
+  if (voltCool > 0) { voltQueued = sgn; return; }
+  doVolt(sgn);
+}
+function doVolt(sgn) {
+  const parts = [bike.f, ...bike.wh], mass = [FM, WM, WM];
+  let cx = 0, cy = 0, M = 0;
+  parts.forEach((o, i) => { cx += o.x*mass[i]; cy += o.y*mass[i]; M += mass[i]; });
+  cx /= M; cy /= M;
+  const dw = sgn*VOLT;
+  for (const o of parts) { o.vx -= dw*(o.y - cy); o.vy += dw*(o.x - cx); }
+  bike.f.w += dw;
+  bike.lean = sgn; voltCool = VOLT_CD; voltQueued = 0;
+  snd.volt();
+}
+
+const nextLevel = () => li < WORLD.levels.length - 1 ? [wi, li + 1] : wi < WORLDS.length - 1 ? [wi + 1, 0] : null;
+function die(title, text) {
+  state = "dead";
+  snd.crash();
+  showMsg(title, text, null, false);
+}
+function win() {
+  state = "won";
+  const key = `${wi}-${li}`, prev = best[key], rec = prev == null || time < prev;
+  if (rec) { best[key] = time; saveBest(); }
+  const nx = nextLevel();
+  showMsg(rec ? "New best!" : "Finished!", rec && prev != null ? `Previous best ${fmt(prev)}` : prev != null ? `Best ${fmt(prev)}` : "First clear of this level.", fmt(time), !!nx);
+  $("msgNext").textContent = nx && nx[0] !== wi ? `On to ${WORLDS[nx[0]].name}` : "Next level";
+  burst(L.flower[0], L.flower[1], "#fff4dc");
+  snd.win();
+}
+function showMsg(title, text, big, next) {
+  setTimeout(() => {
+    if (state === "play" || state === "menu") return;
+    $("msgTitle").textContent = title; $("msgText").textContent = text;
+    $("msgTime").hidden = !big; if (big) $("msgTime").textContent = big;
+    $("msgNext").hidden = !next;
+    $("msgGo").textContent = state === "won" ? "Ride again" : "Try again";
+    $("msg").hidden = false;
+    (next ? $("msgNext") : $("msgGo")).focus();
+  }, state === "dead" ? 700 : 400);
+}
+
+// ---------- Particles ----------
+const parts = [];
+function burst(x, y, col) {
+  for (let i = 0; i < 18; i++) { const a = Math.random()*Math.PI*2, v = 2 + Math.random()*4;
+    parts.push({ x, y, vx:Math.cos(a)*v, vy:Math.sin(a)*v - 2, life:1, col }); }
+}
+
+// ---------- Rendering ----------
+const $ = id => document.getElementById(id);
+const cv = $("c"), ctx = cv.getContext("2d");
+let W = 0, H = 0, DPR = 1, S = 45;
+const cam = { x:0, y:0 };
+function resize() {
+  DPR = Math.min(2, window.devicePixelRatio || 1);
+  W = cv.clientWidth; H = cv.clientHeight;
+  cv.width = W*DPR; cv.height = H*DPR;
+  S = Math.max(26, Math.min(64, H/13));
+  makePattern();
+}
+let pattern;
+function makePattern() {
+  const N = 64, p = document.createElement("canvas"); p.width = p.height = N;
+  const g = p.getContext("2d"), [a, b] = theme.ground;
+  g.fillStyle = a; g.fillRect(0, 0, N, N);
+  g.strokeStyle = b; g.fillStyle = b;
+  if (theme.tex === "hatch") {
+    g.lineWidth = 10;
+    for (let i = -64; i < 128; i += 32) { g.beginPath(); g.moveTo(i, 64); g.lineTo(i + 64, 0); g.stroke(); }
+  } else if (theme.tex === "roots") {
+    g.lineWidth = 3;
+    for (let k = 0; k < 4; k++) { const y = 8 + k*16; g.beginPath(); g.moveTo(0, y); g.bezierCurveTo(20, y - 9, 44, y + 9, 64, y); g.stroke(); }
+    g.fillStyle = "rgba(143,209,79,.10)";
+    for (const [x, y, r] of [[12,20,3],[40,44,4],[52,14,2.5],[24,56,2]]) { g.beginPath(); g.arc(x, y, r, 0, Math.PI*2); g.fill(); }
+  } else if (theme.tex === "craters") {
+    for (const [x, y, r] of [[16,18,8],[44,42,11],[50,12,4],[18,50,5]]) {
+      g.fillStyle = b; g.beginPath(); g.arc(x, y, r, 0, Math.PI*2); g.fill();
+      g.strokeStyle = "rgba(255,255,255,.16)"; g.lineWidth = 2; g.beginPath(); g.arc(x, y, r, Math.PI*0.9, Math.PI*1.75); g.stroke();
+    }
+  } else if (theme.tex === "facets") {
+    for (let cx = 0; cx < N; cx += 32) for (let cy = 0; cy < N; cy += 32) {
+      g.fillStyle = (cx + cy) % 64 ? b : a;
+      g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx + 32, cy); g.lineTo(cx, cy + 32); g.fill();
+      g.fillStyle = (cx + cy) % 64 ? a : b;
+      g.beginPath(); g.moveTo(cx + 32, cy); g.lineTo(cx + 32, cy + 32); g.lineTo(cx, cy + 32); g.fill();
+    }
+    g.strokeStyle = "rgba(143,243,255,.10)"; g.lineWidth = 1.5;
+    for (let k = 0; k <= N; k += 32) { g.beginPath(); g.moveTo(k, 0); g.lineTo(k - 64, 64); g.stroke(); g.beginPath(); g.moveTo(k + 64, 0); g.lineTo(k, 64); g.stroke(); }
+  }
+  pattern = ctx.createPattern(p, "repeat");
+  pattern.setTransform(new DOMMatrix().scale(1/80));
+}
+
+const rnd = (i, k) => { const s = Math.sin(i*127.1 + k*311.7)*43758.5453; return s - Math.floor(s); };
+const stars = Array.from({ length: 260 }, (_, i) => [rnd(i, 1), rnd(i, 2)*0.75, rnd(i, 3)*1.4 + 0.3]);
+const wrap = (v, m) => ((v % m) + m) % m;
+
+function drawBg(t) {
+  const th = theme;
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  for (const [s, c] of th.sky) g.addColorStop(s, c);
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  if (th.stars) {
+    ctx.fillStyle = "rgba(255,244,220,.8)";
+    for (let i = 0; i < th.stars; i++) {
+      const [sx, sy, r] = stars[i], x = wrap(sx*W*1.5 - cam.x*S*0.04, W*1.5);
+      ctx.globalAlpha = 0.35 + 0.35*Math.sin(t*0.002 + sx*50);
+      ctx.fillRect(x, wrap(sy*H - cam.y*S*0.02, H), r, r);
+    }
+    ctx.globalAlpha = 1;
+  }
+  if (th.planet) {
+    const pr = Math.min(W, H)*0.13, px = W*0.76 - cam.x*S*0.015, py = H*0.28 - cam.y*S*0.015;
+    const neb = ctx.createRadialGradient(W*0.2, H*0.7, 0, W*0.2, H*0.7, Math.max(W, H)*0.5);
+    neb.addColorStop(0, "rgba(120,60,200,.22)"); neb.addColorStop(1, "rgba(120,60,200,0)");
+    ctx.fillStyle = neb; ctx.fillRect(0, 0, W, H);
+    ctx.strokeStyle = "rgba(220,210,255,.45)"; ctx.lineWidth = pr*0.07;
+    ctx.beginPath(); ctx.ellipse(px, py, pr*1.9, pr*0.42, -0.35, Math.PI, Math.PI*2); ctx.stroke();
+    const pg = ctx.createRadialGradient(px - pr*0.4, py - pr*0.4, pr*0.1, px, py, pr);
+    pg.addColorStop(0, "#c7a4ff"); pg.addColorStop(1, "#3b2372");
+    ctx.fillStyle = pg; ctx.beginPath(); ctx.arc(px, py, pr, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(px, py, pr*1.9, pr*0.42, -0.35, 0, Math.PI); ctx.stroke();
+  }
+  if (th.ridges) for (const [col, par, amp, base, seed, canopy] of th.ridges) {
+    ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(0, H);
+    for (let x = 0; x <= W + 8; x += 8) {
+      const wx = (x + cam.x*S*par) / 90;
+      const h = canopy ? 0.6*Math.abs(Math.sin(wx*1.9 + seed)) + 0.5*Math.sin(wx*0.6 + seed) + 0.2*Math.abs(Math.sin(wx*4.3))
+                       : Math.sin(wx + seed) + 0.5*Math.sin(wx*2.3 + seed*2) + 0.25*Math.sin(wx*5.1);
+      ctx.lineTo(x, H*base - cam.y*S*par*0.4 - amp*h);
+    }
+    ctx.lineTo(W, H); ctx.fill();
+  }
+  if (th.vines) {
+    ctx.lineWidth = 2;
+    for (let i = 0; i < 16; i++) {
+      const x = wrap(i*173.3 - cam.x*S*0.35, W + 240) - 120, len = 50 + rnd(i, 7)*H*0.35, sway = 8*Math.sin(t*0.0007 + i);
+      ctx.strokeStyle = "rgba(22,70,44,.9)"; ctx.beginPath(); ctx.moveTo(x, 0); ctx.quadraticCurveTo(x + sway*2, len*0.5, x + sway, len); ctx.stroke();
+      ctx.fillStyle = "rgba(40,110,60,.9)";
+      for (let j = 1; j < 5; j++) { ctx.beginPath(); ctx.ellipse(x + sway*j/5 + (j % 2 ? 5 : -5), len*j/5, 5, 2.5, j % 2 ? 0.5 : -0.5, 0, Math.PI*2); ctx.fill(); }
+    }
+  }
+  if (th.fireflies) {
+    for (let i = 0; i < 26; i++) {
+      const x = wrap(i*211 + t*0.012*(1 + i % 3) - cam.x*S*0.2, W), y = H*(0.3 + 0.55*rnd(i, 9)) + 12*Math.sin(t*0.001 + i);
+      ctx.globalAlpha = Math.max(0, Math.sin(t*0.0025 + i*1.7)); ctx.fillStyle = "#f7e67a";
+      ctx.beginPath(); ctx.arc(x, y, 2, 0, Math.PI*2); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+  if (th.specks) {
+    ctx.fillStyle = "#8ff3ff";
+    for (let i = 0; i < 70; i++) {
+      const x = wrap(rnd(i, 4)*W*1.4 - cam.x*S*0.3, W*1.4), y = wrap(rnd(i, 5)*H*1.4 - cam.y*S*0.3, H*1.4), r = 1 + rnd(i, 6)*2;
+      ctx.globalAlpha = 0.15 + 0.35*Math.max(0, Math.sin(t*0.0015 + i*2.3));
+      ctx.beginPath(); ctx.moveTo(x, y - r*2); ctx.lineTo(x + r, y); ctx.lineTo(x, y + r*2); ctx.lineTo(x - r, y); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+}
+
+function tracePolys() {
+  for (const p of L.polys) { ctx.moveTo(p[0][0], p[0][1]); for (let i = 1; i < p.length; i++) ctx.lineTo(p[i][0], p[i][1]); ctx.closePath(); }
+}
+
+function drawWorld(t) {
+  ctx.save();
+  ctx.translate(W/2, H/2); ctx.scale(S, S); ctx.translate(-cam.x, -cam.y);
+  // vines behind the ground, so rock hides them
+  ctx.strokeStyle = "#3f7a3a"; ctx.lineWidth = 0.06;
+  for (const k of killers) if (k.hang) {
+    const [x, y] = kpos(k);
+    ctx.beginPath(); ctx.moveTo(x, y); ctx.quadraticCurveTo(x + 0.3, y - 5, x, y - 22); ctx.stroke();
+    ctx.fillStyle = "#4f9a45";
+    for (let j = 1; j < 6; j++) { ctx.beginPath(); ctx.ellipse(x + (j % 2 ? 0.15 : -0.15), y - j*1.1, 0.16, 0.06, j % 2 ? 0.5 : -0.5, 0, Math.PI*2); ctx.fill(); }
+  }
+  // ground: in caves the rock is everywhere except the air polygons
+  ctx.beginPath();
+  if (L.cave) { const hw = W/2/S + 2, hh = H/2/S + 2; ctx.rect(cam.x - hw, cam.y - hh, hw*2, hh*2); }
+  tracePolys();
+  ctx.fillStyle = pattern; ctx.fill("evenodd");
+  ctx.beginPath(); tracePolys();
+  ctx.strokeStyle = theme.edge; ctx.lineWidth = 0.09; ctx.lineJoin = "round"; ctx.stroke();
+
+  // flower
+  const [fx, fy] = L.flower, open = taken === apples.length;
+  ctx.save(); ctx.translate(fx, fy);
+  ctx.strokeStyle = "#5f9b4a"; ctx.lineWidth = 0.07;
+  ctx.beginPath(); ctx.moveTo(0, 0.7); ctx.quadraticCurveTo(0.15, 0.3, 0, 0); ctx.stroke();
+  ctx.rotate(t*0.0012);
+  for (let i = 0; i < 6; i++) {
+    ctx.rotate(Math.PI/3);
+    ctx.fillStyle = open ? "#fff4dc" : "rgba(255,244,220,.35)";
+    ctx.beginPath(); ctx.ellipse(0.2, 0, 0.18, 0.09, 0, 0, Math.PI*2); ctx.fill();
+  }
+  ctx.fillStyle = open ? "#f2b53b" : "#8a7a5a";
+  ctx.beginPath(); ctx.arc(0, 0, 0.1, 0, Math.PI*2); ctx.fill();
+  ctx.restore();
+
+  // apples (blue ones carry an arrow for the gravity they set)
+  for (const a of apples) if (!a.got) {
+    const bob = Math.sin(t*0.004 + a.x)*0.06;
+    ctx.save(); ctx.translate(a.x, a.y + bob);
+    ctx.fillStyle = a.grav ? "#39c6f4" : "#e4483b";
+    ctx.beginPath(); ctx.arc(-0.07, 0, 0.17, 0, Math.PI*2); ctx.arc(0.07, 0, 0.17, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = "#5b3b1f"; ctx.lineWidth = 0.04; ctx.beginPath(); ctx.moveTo(0, -0.14); ctx.lineTo(0.03, -0.26); ctx.stroke();
+    ctx.fillStyle = "#6cae52"; ctx.beginPath(); ctx.ellipse(0.1, -0.24, 0.08, 0.035, -0.4, 0, Math.PI*2); ctx.fill();
+    if (a.grav) {
+      const [gx, gy] = GDIR[a.grav];
+      ctx.rotate(Math.atan2(gy, gx) - Math.PI/2);
+      ctx.strokeStyle = "#0b1b3a"; ctx.lineWidth = 0.05; ctx.lineCap = "round"; ctx.lineJoin = "round";
+      ctx.beginPath(); ctx.moveTo(0, -0.1); ctx.lineTo(0, 0.1); ctx.moveTo(-0.07, 0.03); ctx.lineTo(0, 0.1); ctx.lineTo(0.07, 0.03); ctx.stroke();
+    } else {
+      ctx.fillStyle = "rgba(255,255,255,.35)"; ctx.beginPath(); ctx.arc(-0.1, -0.07, 0.05, 0, Math.PI*2); ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  // thorn pods
+  for (const k of killers) {
+    const [x, y] = kpos(k);
+    ctx.save(); ctx.translate(x, y); ctx.rotate(t*0.0008 + k.x);
+    ctx.fillStyle = "#ff5d7a";
+    ctx.beginPath();
+    for (let i = 0; i < 10; i++) {
+      const a = i*Math.PI/5;
+      ctx.moveTo(Math.cos(a - 0.22)*0.24, Math.sin(a - 0.22)*0.24);
+      ctx.lineTo(Math.cos(a)*0.44, Math.sin(a)*0.44);
+      ctx.lineTo(Math.cos(a + 0.22)*0.24, Math.sin(a + 0.22)*0.24);
+    }
+    ctx.fill();
+    ctx.fillStyle = "#6d1a45"; ctx.beginPath(); ctx.arc(0, 0, 0.27, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = "rgba(255,200,220,.35)"; ctx.beginPath(); ctx.arc(-0.08, -0.08, 0.07, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+  }
+
+  drawBike();
+
+  for (const p of parts) {
+    ctx.globalAlpha = Math.max(0, p.life); ctx.fillStyle = p.col;
+    ctx.fillRect(p.x - 0.05, p.y - 0.05, 0.1, 0.1);
+  }
+  ctx.globalAlpha = 1;
+  ctx.restore();
+}
+
+function drawBike() {
+  const f = bike.f, d = bike.flip;
+  // wheels
+  for (const wh of bike.wh) {
+    ctx.save(); ctx.translate(wh.x, wh.y);
+    ctx.fillStyle = "#1c1a33"; ctx.beginPath(); ctx.arc(0, 0, WR, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = "#fff4dc"; ctx.lineWidth = 0.05;
+    ctx.beginPath(); ctx.arc(0, 0, WR - 0.08, 0, Math.PI*2); ctx.stroke();
+    ctx.rotate(wh.a); ctx.lineWidth = 0.03;
+    for (let i = 0; i < 4; i++) { ctx.rotate(Math.PI/4); ctx.beginPath(); ctx.moveTo(-WR + 0.1, 0); ctx.lineTo(WR - 0.1, 0); ctx.stroke(); }
+    ctx.restore();
+  }
+  // suspension (from frame anchors to wheel hubs)
+  const c = Math.cos(f.a), s = Math.sin(f.a);
+  const W2 = (lx, ly) => [f.x + c*lx - s*ly, f.y + s*lx + c*ly];
+  ctx.strokeStyle = "#a9a3c9"; ctx.lineWidth = 0.08; ctx.lineCap = "round";
+  bike.wh.forEach((wh, i) => {
+    const [ax, ay] = W2(i ? AX*0.55 : -AX*0.45, 0.05);
+    ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(wh.x, wh.y); ctx.stroke();
+  });
+  // frame + rider in bike space
+  ctx.save(); ctx.translate(f.x, f.y); ctx.rotate(f.a); ctx.scale(d, 1);
+  ctx.fillStyle = "#e4483b";
+  ctx.beginPath(); ctx.moveTo(-0.55, -0.05); ctx.lineTo(0.2, -0.28); ctx.lineTo(0.62, -0.22); ctx.lineTo(0.45, 0.15); ctx.lineTo(-0.3, 0.2); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = "#fff4dc";
+  ctx.beginPath(); ctx.moveTo(-0.7, -0.12); ctx.lineTo(-0.05, -0.22); ctx.lineTo(-0.05, -0.1); ctx.lineTo(-0.62, 0); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = "#1c1a33"; ctx.fillRect(-0.15, 0.02, 0.4, 0.22);
+  // rider
+  const L2 = (pts, w, col) => { ctx.strokeStyle = col; ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(...pts[0]); for (const p of pts.slice(1)) ctx.lineTo(...p); ctx.stroke(); };
+  ctx.lineJoin = "round";
+  L2([[-0.3, -0.2], [0.18, -0.05], [0.08, 0.28]], 0.14, "#2f5d9e");            // leg
+  const lo = bike.lean*LEAN_X*bike.dir;                                        // body shift from volts
+  L2([[-0.3, -0.2], [0.02 + lo, -0.82]], 0.2, "#e4483b");                     // torso
+  L2([[0.02 + lo, -0.75], [0.3 + lo*0.5, -0.55], [0.62, -0.4]], 0.1, "#e4483b"); // arm
+  ctx.strokeStyle = "#fff4dc"; ctx.lineWidth = 0.05;
+  ctx.beginPath(); ctx.moveTo(0.52, -0.1); ctx.lineTo(0.62, -0.42); ctx.stroke();  // bars
+  ctx.fillStyle = "#fff4dc"; ctx.beginPath(); ctx.arc(HEAD.x + lo, HEAD.y, HEAD.r, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = "#1c1a33"; ctx.beginPath(); ctx.ellipse(HEAD.x + lo + 0.1, HEAD.y + 0.02, 0.12, 0.08, 0, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = "#e4483b"; ctx.fillRect(HEAD.x + lo - 0.24, HEAD.y - 0.06, 0.22, 0.06);
+  ctx.restore();
+}
+
+const ARROWS = { up: "↑", left: "←", right: "→" };
+function hud() {
+  $("hTime").textContent = fmt(time);
+  $("hApples").innerHTML = `<b>●</b> ${taken}/${apples.length}`;
+  const gname = Object.keys(GDIR).find(k => GDIR[k] === grav);
+  $("hGrav").hidden = gname === "down"; if (gname !== "down") $("hGrav").textContent = `Gravity ${ARROWS[gname]}`;
+}
+const fmt = t => { const m = Math.floor(t/60), s = t - m*60; return `${String(m).padStart(2,"0")}:${s.toFixed(2).padStart(5,"0")}`; };
+
+// ---------- Loop ----------
+let last = performance.now(), acc = 0;
+function frame(now) {
+  acc += Math.min(0.1, (now - last)/1000); last = now;
+  if (state !== "menu") {
+    while (acc >= 1/60) { tick(); acc -= 1/60;
+      for (const p of parts) { p.vy += 8/60; p.x += p.vx/60; p.y += p.vy/60; p.life -= 1/50; }
+      for (let i = parts.length - 1; i >= 0; i--) if (parts[i].life <= 0) parts.splice(i, 1);
+      if (state === "play" && impact > 3.5 && bumpCool <= 0) { snd.bump(impact); bumpCool = 8; }
+      impact = 0; bumpCool--;
+      bike.flip += (bike.dir - bike.flip)*0.35;
+      if (Math.abs(bike.dir - bike.flip) < 0.02) bike.flip = bike.dir;
+    }
+    snd.engine(state === "play", Math.abs(bike.wh[bike.dir > 0 ? 0 : 1].w), !!keys.gas);
+    // look ahead of the bike, and a little "up" against whichever way gravity pulls
+    const lx = Math.max(-3, Math.min(3, bike.f.vx*0.25)), ly = Math.max(-2, Math.min(2, bike.f.vy*0.12));
+    cam.x += (bike.f.x + lx - grav[0] - cam.x)*0.08; cam.y += (bike.f.y + ly - grav[1] - cam.y)*0.08;
+  } else { acc = 0; snd.engine(false, 0, false); }
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  drawBg(now);
+  if (L) drawWorld(now);
+  requestAnimationFrame(frame);
+}
+
+// ---------- Input ----------
+const map = { ArrowUp:"gas", KeyW:"gas", ArrowDown:"brake", KeyS:"brake" };
+const voltKeys = { ArrowLeft:-1, KeyA:-1, ArrowRight:1, KeyD:1 };
+function turn() { if (state === "play") { bike.dir *= -1; snd.turn(); } }
+function setSoundLabel() { $("bSound").textContent = snd.muted ? "Sound off" : "Sound on"; }
+function toggleSound() { snd.init(); snd.toggle(); setSoundLabel(); }
+// Fullscreen hides the browser's own bars; some app views refuse it, which is fine.
+function toggleFullscreen() {
+  const el = document.documentElement;
+  try {
+    if (document.fullscreenElement || document.webkitFullscreenElement) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+    else { const r = (el.requestFullscreen || el.webkitRequestFullscreen)?.call(el); if (r && r.catch) r.catch(() => {}); }
+  } catch {}
+}
+addEventListener("pointerdown", () => snd.init());
+document.addEventListener("visibilitychange", () => { if (document.hidden) snd.engine(false, 0, false); });
+addEventListener("keydown", e => {
+  snd.init();
+  if (e.code === "KeyM") { toggleSound(); return; }
+  if (e.code === "KeyF") { toggleFullscreen(); return; }
+  if (map[e.code]) { keys[map[e.code]] = true; e.preventDefault(); }
+  else if (voltKeys[e.code]) { const v = voltKeys[e.code]; keys[v < 0 ? "left" : "right"] = true; if (!e.repeat) volt(v); e.preventDefault(); }
+  else if (e.code === "Space") { if (!e.repeat) turn(); e.preventDefault(); }
+  else if (e.code === "Enter" || e.code === "KeyR") { if (state !== "menu" && document.activeElement?.tagName !== "BUTTON") load(wi, li); }
+  else if (e.code === "Escape") openMenu();
+});
+addEventListener("keyup", e => { if (map[e.code]) keys[map[e.code]] = false; if (voltKeys[e.code]) keys[voltKeys[e.code] < 0 ? "left" : "right"] = false; });
+addEventListener("blur", () => { keys = {}; });
+
+document.querySelectorAll(".touch button").forEach(b => {
+  const k = b.dataset.k;
+  b.addEventListener("pointerdown", e => { e.preventDefault(); b.classList.add("on"); if (k === "turn") turn(); else { keys[k] = true; if (k === "left") volt(-1); else if (k === "right") volt(1); } });
+  const up = () => { b.classList.remove("on"); keys[k] = false; };
+  b.addEventListener("pointerup", up); b.addEventListener("pointercancel", up); b.addEventListener("pointerleave", up);
+});
+
+// ---------- Menu ----------
+let menuWorld = 0;
+try { menuWorld = Math.min(WORLDS.length - 1, +localStorage.getItem("springrider.world") || 0); } catch {}
+function renderMenu() {
+  $("worlds").innerHTML = WORLDS.map((w, i) => {
+    const done = w.levels.filter((_, j) => best[`${i}-${j}`] != null).length;
+    return `<button class="wtab" data-w="${i}" aria-pressed="${i === menuWorld}" style="--sw:${w.swatch}"><span class="wn">${i+1} · ${w.name}</span><span class="wp">${done}/${w.levels.length} cleared</span></button>`;
+  }).join("");
+  const w = WORLDS[menuWorld];
+  $("wdesc").innerHTML = `<b>${w.name}</b> — ${w.desc}`;
+  $("levels").innerHTML = w.levels.map((l, i) => {
+    const b = best[`${menuWorld}-${i}`];
+    return `<button data-i="${i}"><span class="n">${menuWorld+1}-${i+1} · ${l.name}</span><span class="best${b != null ? " done" : ""}">${b != null ? "Best " + fmt(b) : "Not cleared"}</span></button>`;
+  }).join("");
+}
+function openMenu() {
+  if (state !== "menu" && L) menuWorld = wi;
+  state = "menu"; $("msg").hidden = true; $("hint").hidden = true; keys = {};
+  renderMenu();
+  $("menu").hidden = false;
+  $("levels").querySelector("button")?.focus();
+}
+$("worlds").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  menuWorld = +b.dataset.w;
+  try { localStorage.setItem("springrider.world", String(menuWorld)); } catch {}
+  renderMenu();
+});
+$("levels").addEventListener("click", e => { const b = e.target.closest("button"); if (b) load(menuWorld, +b.dataset.i); });
+$("bMenu").onclick = e => { e.currentTarget.blur(); openMenu(); };
+$("bSound").onclick = e => { e.currentTarget.blur(); toggleSound(); };
+$("bFull").onclick = e => { e.currentTarget.blur(); toggleFullscreen(); };
+if (!(document.fullscreenEnabled || document.webkitFullscreenEnabled) || matchMedia("(display-mode: fullscreen), (display-mode: standalone)").matches) $("bFull").hidden = true;
+setSoundLabel();
+$("bRestart").onclick = e => { e.currentTarget.blur(); if (L) load(wi, li); };
+$("msgGo").onclick = () => load(wi, li);
+$("msgNext").onclick = () => { const n = nextLevel(); if (n) load(n[0], n[1]); };
+$("msgMenu").onclick = openMenu;
+
+addEventListener("resize", resize);
+resize();
+load(menuWorld, 0); state = "menu"; openMenu();
+requestAnimationFrame(frame);
+})();
+</script>
+<script>
+if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) navigator.serviceWorker.register("sw.js").catch(() => {});
+</script>
+</body>
+</html>
