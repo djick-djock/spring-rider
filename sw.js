@@ -14,8 +14,10 @@ self.addEventListener("fetch", e => {
   const url = new URL(e.request.url);
   const put = res => { const copy = res.clone(); caches.open(CACHE).then(c => c.put(e.request, copy)); return res; };
   if (url.origin === location.origin) {
-    e.respondWith(fetch(e.request).then(put).catch(() =>
-      caches.match(e.request, { ignoreSearch: true }).then(r => r || caches.match("./index.html"))));
+    // Only trust good responses: if the site ever goes away (404) or the phone is offline,
+    // keep playing from the cached copy instead of caching the error page.
+    const cached = () => caches.match(e.request, { ignoreSearch: true }).then(r => r || caches.match("./index.html"));
+    e.respondWith(fetch(e.request).then(res => res.ok ? put(res) : cached().then(r => r || res)).catch(cached));
   } else if (/(^|\.)fonts\.(googleapis|gstatic)\.com$/.test(url.hostname)) {
     e.respondWith(caches.match(e.request).then(r => r || fetch(e.request).then(put)));
   }
